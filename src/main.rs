@@ -30,7 +30,7 @@ fn main() {
         .insert_resource(Level(0))
         .insert_resource(Played(false))
         .add_systems(Startup, (setup, spawn_environment))
-        .add_systems(Update, (setup_scene_once_loaded, mouse_position, move_player))
+        .add_systems(Update, (setup_scene_once_loaded, mouse_position, move_player, move_camera))
         .run();
 }
 
@@ -67,28 +67,30 @@ fn setup(
         asset_server.load("character/protag_0_0_0.glb#Animation3"),
     ]));
 
-    let camera = Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 15.0, 30.0).looking_at(Vec3::ZERO/*Vec3::new(0.0, 5.0, 0.0) */, Vec3::Y),
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 15.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
         projection: PerspectiveProjection {
                 aspect_ratio: 16.0/9.0,
                 ..default()
                 }.into(),
         ..default()
-    };
+    });
 
-    let light = PointLightBundle {
-        point_light: PointLight{
-            color: Color::rgb(204.0, 255.0, 255.0),
-            intensity: 1.0,
-            range: 50000.0,
+    commands.insert_resource(AmbientLight {
+        color: Color::rgb(1.0, 1.0, 1.0),
+        brightness: 0.6,
+    });
+
+    commands.spawn(PointLightBundle {
+        transform: Transform::from_xyz(0.0, 100.0, 0.0),
+        point_light: PointLight {
+            intensity: 10000000.0,
+            range: 500.0,
+            color: Color::rgb(0.0, 0.0, 1.0),
             ..default()
         },
-        transform: Transform::from_xyz(0.0, 100.0, 0.0),
         ..default()
-    };
-
-    commands.spawn(camera);
-    commands.spawn(light);
+    });
 }
 
 fn spawn_environment(
@@ -99,6 +101,7 @@ fn spawn_environment(
     let environment_scene = assets.load("environment/level_0.glb#Scene0");
     let ground_scene = assets.load("environment/interactor_level_0.glb#Scene0");
     let player = assets.load("character/protag_0_0_0.glb#Scene0");
+    let rock = assets.load("environment/hint_rock.glb#Scene0");
 
     commands.spawn(SceneBundle {
         scene: environment_scene,
@@ -113,6 +116,14 @@ fn spawn_environment(
     },
     Ground,
     ));
+
+    commands.spawn(SceneBundle {
+        scene: rock,
+        transform: Transform::from_xyz(-5.0, 0.0, 12.0)
+        .with_scale(Vec3::splat(7.5))
+        .with_rotation(Quat::from_rotation_y(PI / 10.0)),
+        ..Default::default()
+    });
 
     let mut start_direction = 0.0;
 
@@ -160,7 +171,7 @@ fn mouse_position(
 
     if buttons.just_released(MouseButton::Left) {
         if position.z.abs() < 15.0 {
-            if position.x < 80.0 && position.x > 0.0 {
+            if position.x < 100.0 && position.x > 0.0 {
                 mouse_position.pos = position;
                 println!("{}", mouse_position.pos);
             }
@@ -174,6 +185,21 @@ fn setup_scene_once_loaded(
 ) {
     for mut player in &mut players {
         player.play(animations.0[0].clone_weak()).repeat();
+    }
+}
+
+fn move_camera(
+    mut camera_query: Query<(&Camera, &mut Transform)>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    let (_, mut camera_transform) = camera_query.single_mut();
+
+    if keyboard_input.pressed(KeyCode::D) {
+        camera_transform.translation += Vec3::new(0.2, 0.0, 0.0);
+    }
+
+    if keyboard_input.pressed(KeyCode::A) {
+        camera_transform.translation -= Vec3::new(0.2, 0.0, 0.0);
     }
 }
 
