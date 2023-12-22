@@ -29,7 +29,7 @@ fn main() {
         .insert_resource(MousePosition{pos:Vec3::ZERO})
         .insert_resource(Level(0))
         .insert_resource(Played(false))
-        .add_systems(Startup, (setup, spawn_environment))
+        .add_systems(Startup, (setup, start_background_audio, spawn_environment))
         .add_systems(Update, (setup_scene_once_loaded, mouse_position, move_player, move_camera))
         .run();
 }
@@ -78,19 +78,23 @@ fn setup(
 
     commands.insert_resource(AmbientLight {
         color: Color::rgb(1.0, 1.0, 1.0),
-        brightness: 0.6,
+        brightness: 0.3,
     });
 
     commands.spawn(PointLightBundle {
-        transform: Transform::from_xyz(0.0, 100.0, 0.0),
+        transform: Transform::from_xyz(50.0, 100.0, 0.0),
         point_light: PointLight {
-            intensity: 10000000.0,
-            range: 500.0,
-            color: Color::rgb(0.0, 0.0, 1.0),
+            intensity: 100000000.0,
+            range: 1000.0,
+            color: Color::rgb(0.05, 0.1, 0.5),
             ..default()
         },
         ..default()
     });
+}
+
+fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
+    audio.play(asset_server.load("sfx/ambient.ogg")).looped();
 }
 
 fn spawn_environment(
